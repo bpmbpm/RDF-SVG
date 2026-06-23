@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:vad="http://example.org/vad#"
+     width="980" height="520"
+     id="diagram-sales-parent"
+     viewBox="0 0 980 520">
+  <metadata id="doc-metadata">
+    <rdf:RDF>
+      <rdf:Description rdf:about="#diagram-sales-parent">
+        <rdf:type rdf:resource="http://example.org/vad#Diagram"/>
+        <dc:title>VAD: Продажи и обработка заказа</dc:title>
+        <vad:hasParentObj rdf:resource="root"/>
+        <vad:version>1.0</vad:version>
+        <vad:status>DSL demo</vad:status>
+      </rdf:Description>
+    </rdf:RDF>
+  </metadata>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#566573"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#99A3A4" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="980" height="520" fill="#F7F9FB"/>
+  <text x="490" y="36" text-anchor="middle" font-family="Arial" font-size="20" font-weight="bold" fill="#1F2D3D">VAD: Продажи и обработка заказа</text>
+  <line x1="60" y1="68" x2="920" y2="68" stroke="#D5DBDB"/>
+  <text x="32" y="145" transform="rotate(-90,32,145)" font-family="Arial" font-size="11" fill="#6C7A89">Функции</text>
+  <text x="32" y="275" transform="rotate(-90,32,275)" font-family="Arial" font-size="11" fill="#6C7A89">Роли</text>
+  <text x="32" y="405" transform="rotate(-90,32,405)" font-family="Arial" font-size="11" fill="#6C7A89">Информация</text>
+  <line x1="60" y1="210" x2="920" y2="210" stroke="#E5E8E8" stroke-dasharray="5,5"/>
+  <line x1="60" y1="340" x2="920" y2="340" stroke="#E5E8E8" stroke-dasharray="5,5"/>
+
+  <g id="process-lead" class="vad-element vad-process" data-vad-type="Process" data-vad-title="Квалификация лида">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#process-lead"><rdf:type rdf:resource="http://example.org/vad#Process"/><dc:title>Квалификация лида</dc:title><vad:output rdf:resource="#doc-offer"/></rdf:Description></rdf:RDF></metadata>
+    <path d="M105,92 h160 l22,48 l-22,48 h-160 l-22,-48 z" fill="#F5B041" stroke="#B9770E" stroke-width="2" filter="url(#shadow)"/>
+    <text x="185" y="132" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">Квалификация</text>
+    <text x="185" y="152" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">лида</text>
+  </g>
+  <g id="process-offer" class="vad-element vad-process" data-vad-type="Process" data-vad-title="Подготовка КП">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#process-offer"><rdf:type rdf:resource="http://example.org/vad#Process"/><dc:title>Подготовка КП</dc:title><vad:input rdf:resource="#doc-offer"/><vad:output rdf:resource="#doc-contract"/></rdf:Description></rdf:RDF></metadata>
+    <path d="M390,92 h160 l22,48 l-22,48 h-160 l-22,-48 z" fill="#F5B041" stroke="#B9770E" stroke-width="2" filter="url(#shadow)"/>
+    <text x="470" y="132" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">Подготовка</text>
+    <text x="470" y="152" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">КП</text>
+  </g>
+  <g id="process-contract" class="vad-element vad-process" data-vad-type="Process" data-vad-title="Согласование договора">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#process-contract"><rdf:type rdf:resource="http://example.org/vad#Process"/><dc:title>Согласование договора</dc:title><vad:hasChildDiagram rdf:resource="#diagram-sales-contract"/></rdf:Description></rdf:RDF></metadata>
+    <path d="M675,92 h160 l22,48 l-22,48 h-160 l-22,-48 z" fill="#F5B041" stroke="#B9770E" stroke-width="2" filter="url(#shadow)"/>
+    <text x="755" y="132" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">Согласование</text>
+    <text x="755" y="152" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#17202A">договора</text>
+  </g>
+
+  <line x1="287" y1="140" x2="368" y2="140" stroke="#566573" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="572" y1="140" x2="653" y2="140" stroke="#566573" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g id="role-sales" class="vad-element vad-role" data-vad-type="Role" data-vad-title="Менеджер продаж">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#role-sales"><rdf:type rdf:resource="http://example.org/vad#Role"/><dc:title>Менеджер продаж</dc:title><vad:department>Отдел продаж</vad:department></rdf:Description></rdf:RDF></metadata>
+    <rect x="135" y="245" width="145" height="54" rx="26" fill="#58D68D" stroke="#239B56" stroke-width="2"/>
+    <text x="207" y="278" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#0B3D1E">Менеджер продаж</text>
+  </g>
+  <g id="role-lawyer" class="vad-element vad-role" data-vad-type="Role" data-vad-title="Юрист">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#role-lawyer"><rdf:type rdf:resource="http://example.org/vad#Role"/><dc:title>Юрист</dc:title><vad:department>Юридический отдел</vad:department></rdf:Description></rdf:RDF></metadata>
+    <rect x="690" y="245" width="130" height="54" rx="26" fill="#58D68D" stroke="#239B56" stroke-width="2"/>
+    <text x="755" y="278" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#0B3D1E">Юрист</text>
+  </g>
+
+  <g id="doc-offer" class="vad-element vad-document" data-vad-type="Document" data-vad-title="Коммерческое предложение">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#doc-offer"><rdf:type rdf:resource="http://example.org/vad#Document"/><dc:title>Коммерческое предложение</dc:title></rdf:Description></rdf:RDF></metadata>
+    <path d="M350,382 h190 v74 h-190 z M500,382 v32 h40" fill="#D6EAF8" stroke="#2874A6" stroke-width="2"/>
+    <text x="445" y="426" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#154360">Коммерческое предложение</text>
+  </g>
+  <g id="doc-contract" class="vad-element vad-document" data-vad-type="Document" data-vad-title="Договор">
+    <metadata><rdf:RDF><rdf:Description rdf:about="#doc-contract"><rdf:type rdf:resource="http://example.org/vad#Document"/><dc:title>Договор</dc:title></rdf:Description></rdf:RDF></metadata>
+    <path d="M665,382 h150 v74 h-150 z M775,382 v32 h40" fill="#D6EAF8" stroke="#2874A6" stroke-width="2"/>
+    <text x="740" y="426" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#154360">Договор</text>
+  </g>
+</svg>

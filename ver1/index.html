@@ -68,7 +68,7 @@
       overflow: hidden;
     }
 
-    /* ---- Боковая панель: список файлов ---- */
+    /* ---- Боковая панель: treeView диаграмм и объектов ---- */
     #sidebar {
       width: 220px;
       background: #16213E;
@@ -87,6 +87,44 @@
       color: #8A9BB0;
       border-bottom: 1px solid #0F3460;
     }
+
+    #diagram-tree {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    .tree-node {
+      list-style: none;
+    }
+
+    .tree-row {
+      padding: 7px 10px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      font-size: 12px;
+      color: #A0B0C0;
+      display: grid;
+      grid-template-columns: 16px 18px minmax(0, 1fr);
+      align-items: center;
+      gap: 5px;
+      min-height: 30px;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .tree-row:hover { background: #0F3460; color: #E0E0E0; }
+    .tree-row.active {
+      background: #0F3460;
+      border-left-color: #E94560;
+      color: white;
+    }
+    .tree-toggle { color: #6F86A0; font-size: 10px; text-align: center; }
+    .tree-icon { font-size: 14px; text-align: center; }
+    .tree-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-children { list-style: none; margin: 0; padding: 0; }
+    .tree-node.collapsed > .tree-children { display: none; }
+    .tree-objects-branch .tree-row { color: #8DB7E8; }
 
     #file-list {
       list-style: none;
@@ -489,8 +527,9 @@
 
   <!-- Боковая панель: список файлов -->
   <div id="sidebar">
-    <div id="sidebar-title">📁 Файлы диаграмм</div>
-    <ul id="file-list"></ul>
+    <div id="sidebar-title">🌳 treeView диаграмм</div>
+    <ul id="diagram-tree" aria-label="Дерево диаграмм и объектов"></ul>
+    <ul id="file-list" style="display:none"></ul>
     <div id="sidebar-empty" style="display:none">
       Откройте SVG-файл кнопкой «Открыть SVG» или перетащите файл на страницу
     </div>
@@ -590,6 +629,7 @@ const App = {
   selectedElement: null, // выбранный элемент
   zoom: 1.0,           // текущий масштаб
   rdfTriples: [],      // извлечённые RDF-триплеты документа
+  treeState: { expanded: new Set(['root']), activeKey: 'root' },
 };
 
 // ---- Элементы DOM ----
@@ -598,6 +638,7 @@ const els = {
   btnOpen: $('btn-open'),
   fileInput: $('file-input'),
   fileList: $('file-list'),
+  diagramTree: $('diagram-tree'),
   sidebarEmpty: $('sidebar-empty'),
   svgContainer: $('svg-container'),
   svgWrapper: $('svg-wrapper'),
@@ -636,7 +677,7 @@ els.btnOpen.addEventListener('click', () => els.fileInput.click());
 
 // Обработка выбора файла
 els.fileInput.addEventListener('change', (e) => {
-  Array.from(e.target.files).forEach(loadFile);
+  Array.from(e.target.files).forEach(DSL.files.load);
   e.target.value = '';
 });
 
@@ -646,10 +687,11 @@ document.addEventListener('drop', e => {
   e.preventDefault();
   Array.from(e.dataTransfer.files)
     .filter(f => f.name.toLowerCase().endsWith('.svg'))
-    .forEach(loadFile);
+    .forEach(DSL.files.load);
 });
 
 // Загрузка SVG-файла
+// DSL.files.load(file): добавляет SVG в state и запускает обновление дерева.
 function loadFile(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -664,8 +706,8 @@ function loadFile(file) {
     if (idx >= 0) App.files[idx] = entry;
     else App.files.push(entry);
 
-    renderFileList();
-    openDiagram(entry);
+    DSL.tree.render();
+    DSL.diagram.open(entry);
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -673,6 +715,141 @@ function loadFile(file) {
 // ============================================================
 // Список файлов в боковой панели
 // ============================================================
+
+// DSL.tree.render(): строит дерево root -> диаграммы -> объекты диаграммы из RDF hasParentObj.
+function renderTreeView() {
+  els.diagramTree.innerHTML = '';
+  if (App.files.length === 0) {
+    els.sidebarEmpty.style.display = 'block';
+    return;
+  }
+  els.sidebarEmpty.style.display = 'none';
+
+  const root = buildDiagramTree();
+  els.diagramTree.appendChild(renderTreeNode(root, 0));
+}
+
+function buildDiagramTree() {
+  const entries = App.files.map(entry => {
+    const info = readDiagramInfo(entry);
+    return { ...info, entry, key: 'diagram:' + entry.name, children: [], objects: [] };
+  });
+  const byId = new Map(entries.map(item => [item.diagramId, item]));
+  const root = { key: 'root', label: 'root', icon: '🌐', children: [], objects: [] };
+
+  entries.forEach(item => {
+    item.objects = readDiagramObjects(item.entry);
+    const parent = item.parentId && byId.get(item.parentId) ? byId.get(item.parentId) : root;
+    parent.children.push(item);
+  });
+  sortTree(root);
+  return root;
+}
+
+function sortTree(node) {
+  node.children.sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+  node.children.forEach(sortTree);
+}
+
+function renderTreeNode(node, depth) {
+  const li = document.createElement('li');
+  li.className = 'tree-node';
+  li.dataset.key = node.key;
+
+  const hasChildren = node.children.length > 0 || node.objects.length > 0;
+  if (!App.treeState.expanded.has(node.key) && hasChildren) li.classList.add('collapsed');
+
+  const row = document.createElement('div');
+  row.className = 'tree-row' + (App.treeState.activeKey === node.key ? ' active' : '');
+  row.style.paddingLeft = (8 + depth * 14) + 'px';
+  row.innerHTML = `<span class="tree-toggle">${hasChildren ? (li.classList.contains('collapsed') ? '▶' : '▼') : ''}</span><span class="tree-icon">${node.icon || '📊'}</span><span class="tree-label" title="${escAttr(node.label)}">${escHtml(node.label)}</span>`;
+  row.addEventListener('click', () => {
+    App.treeState.activeKey = node.key;
+    if (hasChildren) toggleTreeNode(node.key);
+    if (node.entry) DSL.diagram.open(node.entry, { keepTree: true });
+    if (node.elementId) focusDiagramElement(node.elementId);
+    DSL.tree.render();
+  });
+  if (node.elementId) {
+    row.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (App.currentFile !== node.entry) DSL.diagram.open(node.entry, { keepTree: true });
+      focusDiagramElement(node.elementId);
+      if (App.selectedElement) showContextMenu(e.clientX, e.clientY, App.selectedElement);
+      App.treeState.activeKey = node.key;
+      DSL.tree.render();
+    });
+  }
+  li.appendChild(row);
+
+  const childList = document.createElement('ul');
+  childList.className = 'tree-children';
+  node.children.forEach(child => childList.appendChild(renderTreeNode(child, depth + 1)));
+  if (node.objects.length > 0) {
+    childList.appendChild(renderObjectsBranch(node, depth + 1));
+  }
+  li.appendChild(childList);
+  return li;
+}
+
+function renderObjectsBranch(diagramNode, depth) {
+  const branchKey = diagramNode.key + ':objects';
+  const branch = { key: branchKey, label: 'объекты диаграммы', icon: '▦', children: diagramNode.objects, objects: [] };
+  if (!App.treeState.expanded.has(branchKey)) App.treeState.expanded.add(branchKey);
+  const li = renderTreeNode(branch, depth);
+  li.classList.add('tree-objects-branch');
+  return li;
+}
+
+function toggleTreeNode(key) {
+  if (App.treeState.expanded.has(key)) App.treeState.expanded.delete(key);
+  else App.treeState.expanded.add(key);
+}
+
+function readDiagramInfo(entry) {
+  const svgDoc = new DOMParser().parseFromString(entry.content, 'image/svg+xml');
+  const svgEl = svgDoc.documentElement;
+  const diagramId = '#' + (svgEl.id || entry.name.replace(/\.svg$/i, ''));
+  const triples = extractRdfFromDoc(svgDoc);
+  const titleTriple = triples.find(t => t.predicate.endsWith('/title') || t.predicate.endsWith('#title'));
+  const parentTriple = triples.find(t => t.predicate.endsWith('#hasParentObj'));
+  return {
+    diagramId,
+    parentId: parentTriple ? normalizeDiagramRef(parentTriple.object) : 'root',
+    label: titleTriple ? titleTriple.object : entry.name,
+    icon: '📊',
+  };
+}
+
+function normalizeDiagramRef(value) {
+  if (!value || value === 'root') return 'root';
+  return value.startsWith('#') ? value : '#' + value.split('#').pop();
+}
+
+function readDiagramObjects(entry) {
+  const svgDoc = new DOMParser().parseFromString(entry.content, 'image/svg+xml');
+  return Array.from(svgDoc.querySelectorAll('.vad-element')).map(el => ({
+    key: `object:${entry.name}:${el.id}`,
+    label: el.getAttribute('data-vad-title') || el.id || 'объект',
+    icon: typeIcon(el.getAttribute('data-vad-type') || ''),
+    entry,
+    elementId: el.id,
+    children: [],
+    objects: [],
+  }));
+}
+
+function focusDiagramElement(elementId) {
+  const el = els.svgWrapper.querySelector('#' + CSS.escape(elementId))
+    || (App.currentSvgDoc && App.currentSvgDoc.getElementById(elementId));
+  if (!el) return;
+  selectElement(el);
+  const box = el.getBBox ? el.getBBox() : null;
+  if (box) {
+    els.svgContainer.scrollTo({ left: Math.max(0, box.x * App.zoom - 80), top: Math.max(0, box.y * App.zoom - 80), behavior: 'smooth' });
+  }
+}
 
 function renderFileList() {
   els.fileList.innerHTML = '';
@@ -696,15 +873,15 @@ function renderFileList() {
 // Открытие и отображение диаграммы
 // ============================================================
 
-function openDiagram(entry) {
+// DSL.diagram.open(entry): парсит SVG, извлекает RDF и подключает интерактивные обработчики.
+function openDiagram(entry, options = {}) {
   App.currentFile = entry;
   App.selectedElement = null;
   App.rdfTriples = [];
 
-  // Обновляем список
-  Array.from(els.fileList.children).forEach((li, i) => {
-    li.className = App.files[i] === entry ? 'active' : '';
-  });
+  if (!options.keepTree) App.treeState.activeKey = 'diagram:' + entry.name;
+  App.treeState.expanded.add('diagram:' + entry.name);
+  DSL.tree.render();
 
   // Парсим SVG
   const parser = new DOMParser();
@@ -751,6 +928,16 @@ function openDiagram(entry) {
 
   showToast('Диаграмма загружена: ' + entry.name, 'success');
 }
+
+// Читаемый фасад DSL: приложение ниже вызывает группы действий, а не разрозненные обработчики.
+const DSL = {
+  files: { load: loadFile },
+  tree: { render: renderTreeView },
+  diagram: { open: openDiagram, focus: focusDiagramElement },
+  rdf: { extractDoc: extractRdfFromDoc, extractElement: extractRdfFromElement, updateElement: updateElementRdf },
+  viewport: { zoom: setZoom },
+  ui: { contextMenu: showContextMenu, properties: showPropertiesPanel },
+};
 
 // Получение заголовка диаграммы из RDF/XML
 function getDocRdfTitle(svgDoc) {
@@ -1563,6 +1750,8 @@ async function tryLoadBuiltinDemos() {
   const demoFiles = [
     'dia/vad-order-management.svg',
     'dia/vad-hr-process.svg',
+    'dia/vad-sales-parent.svg',
+    'dia/vad-sales-contract.svg',
   ];
 
   for (const path of demoFiles) {
@@ -1582,8 +1771,8 @@ async function tryLoadBuiltinDemos() {
   }
 
   if (App.files.length > 0) {
-    renderFileList();
-    openDiagram(App.files[0]);
+    DSL.tree.render();
+    DSL.diagram.open(App.files[0]);
   } else {
     $('sidebar-empty') && (els.sidebarEmpty.style.display = 'block');
   }
