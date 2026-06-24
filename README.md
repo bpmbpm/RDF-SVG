@@ -1,3 +1,3 @@
 # RDF-SVG
 ### run
-- https://bpmbpm.github.io/family-tree/ver1/index.html
+- https://github.com/bpmbpm/RDF-SVG/tree/main/ver1 ; https://bpmbpm.github.io/family-tree/ver1/index.html
